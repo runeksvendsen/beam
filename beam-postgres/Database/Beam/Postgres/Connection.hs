@@ -175,8 +175,19 @@ runPgRowReader conn rowIdx res fields (FromBackendRowM readRow) =
                Right next' -> next'
                Left {} -> pure (Left aErr)
 
-    step (FailParseWith err) _ _ _ =
-      pure (Left err)
+    step (FailParseWith brre) curCol colCount fields' =
+      let showField field = show
+            ( PgI.result field
+            , PgI.column field
+            , PgI.typeOid field
+            )
+          brre' = brre {
+            brreError = ColumnErrorInternal $
+                show (brreError brre) ++ "  "
+                ++ show (curCol, colCount) ++ "  "
+                ++ concat (map showField fields')
+              }
+      in pure (Left brre')
 
     finish x _ _ _ = pure (Right x)
 
